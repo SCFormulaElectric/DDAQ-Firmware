@@ -33,7 +33,7 @@ void leds_service(uint32_t now_ms, uint32_t fault_flags, uint32_t can_activity)
     static uint32_t can_flash_start_ms;
     static uint8_t can_flash_active;
 
-    /* Unsigned elapsed time preserves the heartbeat phase across tick rollover. */
+    /* Keep the beat on the same schedule when the main loop runs late or the tick wraps. */
     uint32_t heartbeat_elapsed_ms = now_ms - heartbeat_start_ms;
     if (heartbeat_elapsed_ms >= HEARTBEAT_PERIOD_MS) {
         heartbeat_elapsed_ms %= HEARTBEAT_PERIOD_MS;
@@ -42,6 +42,7 @@ void leds_service(uint32_t now_ms, uint32_t fault_flags, uint32_t can_activity)
     leds_set(LED_STAT, heartbeat_elapsed_ms < HEARTBEAT_ON_MS);
     leds_set(LED_FAULT, fault_flags != 0u);
 
+    /* Restart the flash when traffic arrives so the LED stays lit through a burst. */
     if (can_activity != last_can_activity) {
         last_can_activity = can_activity;
         can_flash_start_ms = now_ms;

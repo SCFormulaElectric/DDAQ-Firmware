@@ -23,16 +23,32 @@ void leds_set(led_t led, uint8_t on)
 
 void leds_service(uint32_t now_ms, uint32_t fault_flags, uint32_t can_activity)
 {
-    /* TODO(T1): status LEDs. Use only HAL_GetTick-style timing (now_ms), never HAL_Delay().
-     *   - STATUS (green): 1 Hz heartbeat, 100 ms on / 900 ms off -> "firmware is running"
-     *   - FAULT (red):    on while fault_flags != 0 (see DDAQ_FAULT_* in ddaq_config.h)
-     *                     stretch goal: blink the number of the lowest set fault bit + 1
-     *   - CAN (yellow):   20 ms flash whenever can_activity has changed since the last call
-     * The LEDs are active high (pin -> R130-R132 -> LED anode, cathode to GND), so leds_set(x, 1) = on.
-     * Test: board boots -> green blinks; pull the SD card before power-up -> red on. */
-    (void)now_ms;
-    (void)fault_flags;
-    (void)can_activity;
+    enum {
+        HEARTBEAT_PERIOD_MS = 1000,
+        HEARTBEAT_ON_MS = 100,
+        CAN_FLASH_MS = 20
+    };
+    static uint32_t heartbeat_start_ms;
+    static uint32_t last_can_activity;
+    static uint32_t can_flash_start_ms;
+    static uint8_t can_flash_active;
+
+    /* Unsigned elapsed time preserves the heartbeat phase across tick rollover. */
+    uint32_t heartbeat_elapsed_ms = now_ms - heartbeat_start_ms;
+    if (heartbeat_elapsed_ms >= HEARTBEAT_PERIOD_MS) {
+        heartbeat_elapsed_ms %= HEARTBEAT_PERIOD_MS;
+        heartbeat_start_ms = now_ms - heartbeat_elapsed_ms;
+    }
+    leds_set(LED_STAT, heartbeat_elapsed_ms < HEARTBEAT_ON_MS);
+    leds_set(LED_FAULT, fault_flags != 0u);
+
+    if (can_activity != last_can_activity) {
+        last_can_activity = can_activity;
+        can_flash_start_ms = now_ms;
+        can_flash_active = 1u;
+    }
+    can_flash_active = can_flash_active && (now_ms - can_flash_start_ms < CAN_FLASH_MS);
+    leds_set(LED_CAN, can_flash_active);
 }
 
 /* ========================================================================

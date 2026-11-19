@@ -41,13 +41,9 @@ void leds_service(uint32_t now_ms, uint32_t fault_flags, uint32_t can_activity)
 
 uint8_t node_id_read(void)
 {
-    /* TODO(T2): read the two jumpers once at start-up.
-     *   bit 0 = HAL_GPIO_ReadPin(NODE_ID0_GPIO_Port, NODE_ID0_Pin)
-     *   bit 1 = HAL_GPIO_ReadPin(NODE_ID1_GPIO_Port, NODE_ID1_Pin)
-     *   open jumper reads 1 (pull-up), bridged reads 0
-     * Return 0..3. It is stored in the log header and offsets the CAN IDs (T6).
-     * Test: bridge JP3 only -> 2 (binary 10), nothing bridged -> 3. */
-    return 0;
+    const uint8_t bit0 = HAL_GPIO_ReadPin(NODE_ID0_GPIO_Port, NODE_ID0_Pin) == GPIO_PIN_SET;
+    const uint8_t bit1 = HAL_GPIO_ReadPin(NODE_ID1_GPIO_Port, NODE_ID1_Pin) == GPIO_PIN_SET;
+    return (uint8_t)(bit0 | (bit1 << 1));
 }
 
 /* ========================================================================

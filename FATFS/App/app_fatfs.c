@@ -105,11 +105,12 @@ int32_t MX_FATFS_Process(void)
 DWORD get_fattime(void)
 {
   /* USER CODE BEGIN get_fattime */
-  /* The board has no battery-backed RTC. Use the firmware build timestamp. */
+  /* The board has no battery-backed clock. Logs from the same build share its timestamp. */
   static const char month_names[][4] = {
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   };
+  /* The compiler gives us dates like "Nov  8 2026" and times like "16:30:05". */
   const char *build_date = __DATE__;
   const char *build_time = __TIME__;
   const DWORD year = 100U * parse_timestamp_pair(build_date + 7) +
@@ -121,6 +122,7 @@ DWORD get_fattime(void)
     }
   }
 
+  /* FAT has seven bits for the year offset from 1980. */
   if (month > 12U || year < 1980U || year > 2107U) {
     return 0U;
   }

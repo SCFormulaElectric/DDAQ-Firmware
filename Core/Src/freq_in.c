@@ -67,8 +67,16 @@ float freq_in_get_hz(uint8_t ch)
      *   - period = freq_in_get_period_ticks(ch); one tick = 1 / DDAQ_FREQ_TICK_HZ seconds
      *   - return 0.0f when the period is 0 (stopped)
      * Test: feed a 100 Hz square wave from a function generator into FREQ1 -> expect 100.0. */
-    (void)ch;
-    return 0.0f;
+    uint32_t tickCount =  freq_in_get_period_ticks(ch);
+    //return 0.0 if no tick count
+    if(!tickCount) {return 0.0f;}
+    //frq is 1/ period
+     float freq = 1 / ((float)tickCount/DDAQ_FREQ_TICK_HZ);
+     return freq;
+   
+    
+
+
 }
 
 float freq_in_get_wheel_kph(uint8_t ch, uint16_t teeth_per_rev, float tire_circumference_m)
@@ -79,8 +87,15 @@ float freq_in_get_wheel_kph(uint8_t ch, uint16_t teeth_per_rev, float tire_circu
      *   km/h = m/s * 3.6
      * Guard against teeth_per_rev == 0. Ask the suspension/vehicle-dynamics
      * team for the tooth count and tyre circumference, and add them to ddaq_config.h. */
-    (void)ch;
-    (void)teeth_per_rev;
-    (void)tire_circumference_m;
-    return 0.0f;
+    float freq = freq_in_get_hz(ch);
+
+    if(!teeth_per_rev){
+        return 0.0f;
+    }
+
+    float rps = freq / teeth_per_rev;
+    float mps = rps * tire_circumference_m;
+    float kmph = mps * 3.6f;
+    return kmph;
+
 }

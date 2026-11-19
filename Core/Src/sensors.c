@@ -15,15 +15,18 @@
  * The values below are placeholders: 0-5 V reads as 0-5 "V". */
 const sensor_cfg_t sensor_cfg[DDAQ_NUM_AI] = {
     /* name   unit  range                         v_min v_max eng_min eng_max */
-    { "AI0", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
-    { "AI1", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
-    { "AI2", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
-    { "AI3", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
-    { "AI4", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
-    { "AI5", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
-    { "AI6", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
-    { "AI7", "V", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 5.0f },
+    { "AI0", "mm", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 50.0f },
+    { "AI1", "mm", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 50.0f },
+    { "AI2", "mm", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 50.0f },
+    { "AI3", "mm", ADS8688_RANGE_UNIPOLAR_5V12, 0.0f, 5.0f, 0.0f, 50.0f },
+    { "AI4", "psi", ADS8688_RANGE_UNIPOLAR_5V12, 0.5f, 5.0f, 0.0f, 2250.0f },
+    { "AI5", "psi", ADS8688_RANGE_UNIPOLAR_5V12, 0.5f, 5.0f, 0.0f, 2250.0f },
+    { "AI6", "psi", ADS8688_RANGE_UNIPOLAR_5V12, 0.5f, 5.0f, 0.0f, 2250.0f },
+    { "AI7", "psi", ADS8688_RANGE_UNIPOLAR_5V12, 0.5f, 5.0f, 0.0f, 2250.0f },
 };
+
+// 0.5 psi/mV 
+// 10 mm / V
 
 float sensors_ai_volts(uint8_t ch, uint16_t raw)
 {
@@ -40,9 +43,20 @@ float sensors_ai_value(uint8_t ch, uint16_t raw)
      * Guard against v_max == v_min. Stretch: flag a broken sensor when the
      * voltage is outside v_min..v_max by more than 0.2 V (open or shorted wire).
      * Test: with the placeholder table, 2.50 V in must give 2.50 out. */
-    (void)ch;
-    (void)raw;
-    return 0.0f;
+    if (ch >= DDAQ_NUM_AI) return 0.0f;
+
+    float volts = sensors_ai_volts(ch, raw);
+
+    float v_min = sensor_cfg[ch].v_min;
+    float v_max = sensor_cfg[ch].v_max;
+    float eng_min = sensor_cfg[ch].eng_min;
+    float eng_max = sensor_cfg[ch].eng_max;
+
+    if (v_max == v_min) return 0.0f;
+
+    // start of eng range, plus percent of voltage range times range of eng
+    return eng_min + (volts - v_min) * (eng_max - eng_min) / (v_max - v_min);
+    
 }
 
 void telemetry_service(uint32_t now_ms, uint8_t node_id, const log_sample_t *latest)

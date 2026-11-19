@@ -41,6 +41,7 @@ void leds_service(uint32_t now_ms, uint32_t fault_flags, uint32_t can_activity)
 
 uint8_t node_id_read(void)
 {
+    /* The board's pull-ups make open jumpers read high. JP3 is bit 0 and JP4 is bit 1. */
     const uint8_t bit0 = HAL_GPIO_ReadPin(NODE_ID0_GPIO_Port, NODE_ID0_Pin) == GPIO_PIN_SET;
     const uint8_t bit1 = HAL_GPIO_ReadPin(NODE_ID1_GPIO_Port, NODE_ID1_Pin) == GPIO_PIN_SET;
     return (uint8_t)(bit0 | (bit1 << 1));

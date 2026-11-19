@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -56,6 +57,7 @@ FS_FileOperationsTypeDef Appli_state = APPLICATION_IDLE;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
+static DWORD parse_timestamp_pair(const char *digits);
 
 /* USER CODE END PFP */
 
@@ -103,18 +105,45 @@ int32_t MX_FATFS_Process(void)
 DWORD get_fattime(void)
 {
   /* USER CODE BEGIN get_fattime */
-  /* TODO(T12): give log files a real date (it is a fixed 2026-01-01 placeholder now).
-   * There is no RTC battery on this board, so use the firmware build time:
-   * __DATE__ is "Nov 18 2026" and __TIME__ is "16:30:05" (C compiler macros).
-   * Pack the fields as FatFs wants:
-   *   ((year - 1980) << 25) | (month << 21) | (day << 16) | (hour << 11) | (min << 5) | (sec / 2)
-   * Stretch: take the date from a CAN time message sent by the dash/logger, if the car has one.
-   * Test: copy a log to a PC and check the "Modified" date. */
-  return ((DWORD)(2026 - 1980) << 25) | ((DWORD)1 << 21) | ((DWORD)1 << 16);
+  /* The board has no battery-backed clock. Logs from the same build share its timestamp. */
+  static const char month_names[][4] = {
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  };
+  /* The compiler gives us dates like "Nov  8 2026" and times like "16:30:05". */
+  const char *build_date = __DATE__;
+  const char *build_time = __TIME__;
+  const DWORD year = 100U * parse_timestamp_pair(build_date + 7) +
+                     parse_timestamp_pair(build_date + 9);
+  DWORD month = 1U;
+  for (; month <= 12U; ++month) {
+    if (strncmp(build_date, month_names[month - 1U], 3U) == 0) {
+      break;
+    }
+  }
+
+  /* FAT has seven bits for the year offset from 1980. */
+  if (month > 12U || year < 1980U || year > 2107U) {
+    return 0U;
+  }
+
+  const DWORD day = parse_timestamp_pair(build_date + 4);
+  const DWORD hour = parse_timestamp_pair(build_time);
+  const DWORD minute = parse_timestamp_pair(build_time + 3);
+  const DWORD second = parse_timestamp_pair(build_time + 6);
+
+  /* FatFs counts seconds in two-second increments. */
+  return ((year - 1980U) << 25) | (month << 21) | (day << 16) |
+         (hour << 11) | (minute << 5) | (second / 2U);
   /* USER CODE END get_fattime */
 }
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+static DWORD parse_timestamp_pair(const char *digits)
+{
+  /* __DATE__ pads a single-digit day with a space. */
+  const DWORD tens = digits[0] == ' ' ? 0U : (DWORD)(digits[0] - '0');
+  return tens * 10U + (DWORD)(digits[1] - '0');
+}
 /* USER CODE END Application */

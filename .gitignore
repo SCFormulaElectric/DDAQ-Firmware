@@ -1,0 +1,16 @@
+# STM32CubeIDE build output
+Debug/
+Release/
+*.launch
+
+# IAR EWARM build output and per-user settings
+EWARM/*/
+!EWARM/*.ew?
+EWARM/settings/
+*.dep
+
+# Eclipse workspace and editor clutter
+.metadata/
+.vscode/
+*.bak
+__pycache__/
